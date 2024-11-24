@@ -1,60 +1,10 @@
-import heapq
 from collections import Counter
+from utils import read_input_file, save_output_file, build_hufman_table, input_file, output_file, table_file, generate_huffman_codes, build_huffman_tree, save_file
 
-class Node:
-    def __init__(self, symbol=None, frequency=None):
-        self.symbol = symbol
-        self.frequency = frequency
-        self.left = None
-        self.right = None
 
-    def __lt__(self, other):
-        return self.frequency < other.frequency
+def compress_huffman(input):
 
-def build_huffman_tree(frequency):
-    """Build the Huffman tree from character frequencies."""
-    # Create a priority queue of nodes
-    priority_queue = [Node(char, freq) for char, freq in frequency.items()]
-    heapq.heapify(priority_queue)
-
-    # Build the Huffman tree
-    while len(priority_queue) > 1:
-        left_child = heapq.heappop(priority_queue)
-        right_child = heapq.heappop(priority_queue)
-        merged_node = Node(frequency=left_child.frequency + right_child.frequency)
-        merged_node.left = left_child
-        merged_node.right = right_child
-        heapq.heappush(priority_queue, merged_node)
-
-    return priority_queue[0]
-
-def generate_huffman_codes(node, code="", huffman_codes={}):
-    #Generate Huffman codes recursively.
-    if node is not None:
-        if node.symbol is not None:  # Leaf node
-            huffman_codes[node.symbol] = code
-        generate_huffman_codes(node.left, code + "0", huffman_codes)
-        generate_huffman_codes(node.right, code + "1", huffman_codes)
-
-    return huffman_codes
-
-def read_input_file(input_file):
-    """Reads the input string from a file."""
-    with open(input_file, 'r') as file:
-        return file.read().strip()
-
-def save_output_file(output_file, huffman_codes):
-    """Saves the Huffman codes to an output file."""
-    with open(output_file, 'w') as file:
-        for char, code in huffman_codes.items():
-            # Escape special characters like newline for clarity in the output
-            escaped_char = repr(char).strip("'")
-            file.write(f"{escaped_char},{code}\n")
-
-def main(input_file, output_file):
-    input_string = read_input_file(input_file)
-
-    frequency = Counter(input_string)
+    frequency = Counter(input)
 
     # Build the Huffman tree
     root = build_huffman_tree(frequency)
@@ -62,11 +12,44 @@ def main(input_file, output_file):
     # generating codes
     huffman_codes = generate_huffman_codes(root)
 
-    # Step 5: Save Huffman codes to output file
-    save_output_file(output_file, huffman_codes)
-    print(f"Huffman codes written to {output_file}")
+    compressed_data = ""
+    for char in input :
+        compressed_data += huffman_codes[char]
+
+    save_output_file(table_file, huffman_codes)
+    save_file(output_file, compressed_data) 
+
+    return compressed_data
 
 
-input_file = "input.txt"
-output_file = "output.txt"
-main(input_file, output_file)
+def decompress_huffman(compressed_data: str):
+    compressed_data += '$' # dumy char
+    huffman_table = read_input_file(table_file)
+    hufman_dict = {}
+    for line in huffman_table.split("\n") :
+        line_splited = line.split(',')
+        hufman_dict[line_splited[1]] = line_splited[0]
+
+    decompressed_data=""
+    current_binary = ""
+    for binary_code in compressed_data:
+        if(current_binary in hufman_dict):
+            decompressed_data += hufman_dict[current_binary]
+            current_binary = ""
+
+        current_binary += binary_code  
+    
+    return decompressed_data
+
+def main():
+    input_string = read_input_file(input_file)
+    compressed_data = compress_huffman(input_string)
+    decompress_data = decompress_huffman(compressed_data)
+
+    if(input_string != decompress_data):
+        print("fail")
+    else:
+        print("success")
+
+
+main()
